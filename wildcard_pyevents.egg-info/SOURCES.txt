@@ -1,0 +1,9 @@
+setup.py
+wildcard_pyevents/__init__.py
+wildcard_pyevents/client.py
+wildcard_pyevents.egg-info/PKG-INFO
+wildcard_pyevents.egg-info/SOURCES.txt
+wildcard_pyevents.egg-info/dependency_links.txt
+wildcard_pyevents.egg-info/not-zip-safe
+wildcard_pyevents.egg-info/requires.txt
+wildcard_pyevents.egg-info/top_level.txt
