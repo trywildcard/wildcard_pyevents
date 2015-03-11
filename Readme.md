@@ -1,11 +1,9 @@
-###Wildcard Pyevents
-===============
+# Wildcard Pyevents
 
-Wildcard Pyevents is a python package to do event logging at Wildcard.
+> Wildcard Pyevents is a python package to do event logging at Wildcard.
 
 
-###Examples
-========
+# Examples
 
 Here's a basic example:
 
