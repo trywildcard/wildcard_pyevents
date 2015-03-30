@@ -105,4 +105,4 @@ class WildcardPyEventsClient(object):
 
         events_payload = map((lambda x: json.dumps(x)), events)
 
-        self.redis_client.lpush(self.logstash_redis_queue, *events_payload)
+        self.redis_client.rpush(self.logstash_redis_queue, *events_payload)
