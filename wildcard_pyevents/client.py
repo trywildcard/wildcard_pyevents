@@ -5,6 +5,7 @@ Python client for Wildcard Events
 import json
 import types
 import redis
+import datetime
 from influxdb import InfluxDBClient
 
 
@@ -82,12 +83,21 @@ class WildcardPyEventsClient(object):
         if not isinstance(events, types.ListType):
             raise RuntimeError('Need a list of events')
 
+        # create a timestamp in influx compatible format (ms since epoch, utc)
+        epoch = datetime.datetime.utcfromtimestamp(0)
+        delta = datetime.datetime.utcnow() - epoch
+        timestamp = int(delta.total_seconds()*1000.0 +
+                        delta.microseconds/1000.0)
+
         keys = events[0].keys()
         points = []
         for event in events:
             event_keys = event.keys()
             if (event_keys != keys):
                 raise RuntimeError('Events have to have the same structure.')
+
+            if "time" not in event:
+                event["time"] = timestamp
 
             vals = map((lambda x: event[x]), keys)
             points.append(vals)
@@ -100,7 +110,13 @@ class WildcardPyEventsClient(object):
         if not isinstance(events, types.ListType):
             raise RuntimeError('Need a list of events')
 
+        # create a timestamp in python-beaver compatible format
+        now = datetime.datetime.utcnow()
+        timestamp = (now.strftime("%Y-%m-%dT%H:%M:%S") +
+                     ".%03d" % (now.microsecond / 1000) + "Z")
         for event in events:
+            if "@timestamp" not in event:
+                event["@timestamp"] = timestamp
             event["eventName"] = event_name
 
         events_payload = map((lambda x: json.dumps(x)), events)
