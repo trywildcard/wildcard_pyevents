@@ -3,7 +3,6 @@
 Python client for Wildcard Events
 """
 import json
-import types
 import redis
 import datetime
 from influxdb import InfluxDBClient
@@ -58,7 +57,7 @@ class WildcardPyEventsClient(object):
         self.environment = environment
 
     def send(self, event_name, payload, type=None):
-        if not isinstance(payload, types.ListType):
+        if not isinstance(payload, list):
             payload = [payload]
 
         for event in payload:
@@ -69,18 +68,18 @@ class WildcardPyEventsClient(object):
 
         try:
             self.send_to_influx(event_name, payload)
-        except Exception, e:
+        except Exception as e:
             print("Could not send events to influx: " + json.dumps(payload))
             print(e)
 
         try:
             self.send_to_logstash(event_name, payload)
-        except Exception, e:
+        except Exception as e:
             print("Could not send events to logstash: " + json.dumps(payload))
             print(e)
 
     def send_to_influx(self, event_name, events):
-        if not isinstance(events, types.ListType):
+        if not isinstance(events, list):
             raise RuntimeError('Need a list of events')
 
         # create a timestamp in influx compatible format (ms since epoch, utc)
@@ -107,7 +106,7 @@ class WildcardPyEventsClient(object):
         self.influxdb_client.write_points(json.dumps([json_body]))
 
     def send_to_logstash(self, event_name, events):
-        if not isinstance(events, types.ListType):
+        if not isinstance(events, list):
             raise RuntimeError('Need a list of events')
 
         # create a timestamp in python-beaver compatible format
