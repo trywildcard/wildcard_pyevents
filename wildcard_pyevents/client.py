@@ -20,34 +20,37 @@ class WildcardPyEventsClient(object):
                  influx_username='app',
                  influx_password='',
                  influx_database='developer-metrics',
+                 influx_ssl=False,
                  influx_udp_port=-1,
                  logstash_redis_host='localhost',
                  logstash_redis_port=6379,
-                 logstash_redis_queue='logstash'
+                 logstash_redis_db=0,
+                 logstash_redis_queue='logstash',
+                 force_event_namespace=None,
+                 static_data=None,
+                 event_name_fmt=None,
                  ):
-        influx_use_udp = False
-        if host_name is None or environment is None:
-            raise RuntimeError('Need to specify host_name, environment')
-        if influx_udp_port > -1:
-            influx_use_udp = True
+        self.host_name = host_name
+        self.environment = environment
         self.influxdb_client = InfluxDBClient(
             host=influx_host,
             port=influx_port,
             username=influx_username,
             password=influx_password,
             database=influx_database,
-            ssl=False,
-            use_udp=influx_use_udp,
+            ssl=influx_ssl,
+            use_udp=influx_udp_port > -1,
             udp_port=influx_udp_port,
         )
         self.redis_client = redis.StrictRedis(
             host=logstash_redis_host,
             port=logstash_redis_port,
-            db=0,
+            db=logstash_redis_db,
         )
         self.logstash_redis_queue = logstash_redis_queue
-        self.host_name = host_name
-        self.environment = environment
+        self.force_event_namespace = force_event_namespace
+        self.static_data = static_data if static_data is not None else {}
+        self.event_name_fmt = event_name_fmt
 
     def send(self, event_name, payload):
         self.send_to_influx(event_name, payload)
@@ -58,8 +61,18 @@ class WildcardPyEventsClient(object):
             payload = [payload]
 
         for event in payload:
-            event["environment"] = self.environment
-            event["host"] = self.host_name
+            if self.force_event_namespace:
+                for k in event.keys():
+                    # skip some keys
+                    if k in ('environment', 'host'):
+                        continue
+
+                    if not k.startswith(self.force_event_namespace):
+                        event[self.force_event_namespace+k] = event.pop(k)
+
+            event.update(self.static_data)
+            event.update({'environment': self.environment,
+                          'host': self.host_name})
 
         return payload
 
@@ -79,6 +92,8 @@ class WildcardPyEventsClient(object):
 
     def _send_to_influx(self, event_name, events):
         events = self.normalize_payload(events)
+        if self.event_name_fmt:
+            event_name = self.event_name_fmt.format(event_name)
 
         # create a timestamp in influx compatible format (ms since epoch, utc)
         epoch = datetime.datetime.utcfromtimestamp(0)
@@ -103,6 +118,8 @@ class WildcardPyEventsClient(object):
 
     def _send_to_logstash(self, event_name, events):
         events = self.normalize_payload(events)
+        if self.event_name_fmt:
+            event_name = self.event_name_fmt.format(event_name)
 
         # create a timestamp in python-beaver compatible format
         now = datetime.datetime.utcnow()
